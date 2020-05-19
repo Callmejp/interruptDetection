@@ -18,7 +18,7 @@ We use multithreading to simulate the implementation of each subroutine running.
 
 ### TODO
 - [x] Support to Array. (For now, we just treat Array as a single Variable.)
-- [] Possible Read/Write happens in the IF CONDITION / FOR CONDITION.
+- [ ] Possible Read/Write happens in the IF CONDITION / FOR CONDITION.
    ```c
    if (here) {
        x = 1;   
