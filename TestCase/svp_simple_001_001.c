@@ -11,16 +11,17 @@
  *
  *
  *
- *
+ * 因为枚举复杂度过高，所以将svp_simple_001_001_global_array的size由10000调为10，
+ * Trigger由9999调为9。
  */
 
 #include "../common.h"
 
 volatile int svp_simple_001_001_global_var;
-volatile int svp_simple_001_001_global_array[10000];
+volatile int svp_simple_001_001_global_array[10];
 volatile int svp_simple_001_001_global_flag = 0;
 
-#define TRIGGER 9999
+#define TRIGGER 9
 
 void svp_simple_001_001_main() {
   init();
@@ -29,9 +30,9 @@ void svp_simple_001_001_main() {
 
   idlerun();
 
-  for (int i = 0; i < 10000; i++) svp_simple_001_001_global_array[i] = 0;
+  for (int i = 0; i < 10; i++) svp_simple_001_001_global_array[i] = 0;
 
-  for (int i = 0; i < 10000; i++) {
+  for (int i = 0; i < 10; i++) {
     if (i == TRIGGER) svp_simple_001_001_global_array[i] = 1;
   }
 }
@@ -58,7 +59,7 @@ void svp_simple_001_001_isr_2() {
         svp_simple_001_001_global_array[0];    }
 
   reader3 = svp_simple_001_001_global_array
-      [1000];
+      [1];
 
   int reader2;
   reader2 = svp_simple_001_001_global_var;

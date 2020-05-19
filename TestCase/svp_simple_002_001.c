@@ -10,14 +10,15 @@
  * 中断间的优先级以中断号作为标准，中断号越高，中断优先级越高。
  *
  *
- *
+ * 因为枚举复杂度过高，所以将MAX_LENGTH由10000调为10，
+ * Trigger由9999调为9。
  *
  */
 
 #include "../common.h"
 
-#define MAX_LENGTH 10000
-#define TRIGGER 9999
+#define MAX_LENGTH 10
+#define TRIGGER 9
 
 volatile int svp_simple_002_001_global_array[MAX_LENGTH];
 volatile int casee2_global_var;

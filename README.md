@@ -1,6 +1,7 @@
 ## Interrupt Conflict Detection
 
-Mainly based this [idea](http://www.jos.org.cn/ch/reader/create_pdf.aspx?file_no=4980&journal_id=jos).
+Mainly based this [idea](http://www.jos.org.cn/ch/reader/create_pdf.aspx?file_no=4980&journal_id=jos)
+and [Antlr](https://github.com/antlr)(lexer&parser analysis support).
 
 ### Restriction
 
@@ -10,18 +11,14 @@ Mainly based this [idea](http://www.jos.org.cn/ch/reader/create_pdf.aspx?file_no
 ### Our Measure
 
 Brutal Force. We assume the exact place where INTER_1 & INTER_2
-will happen(or not happen), then we mock program runs and record
+will happen, then we mock program runs and record
 the Read/Write Operator to the global variables.
 
-**But if interrupt happens in the Loop Segment, which time
-of the loop does it correspond to?**
-
-So we break the Loop Segment into Loop Count * (Sequential Segment).
+We use multithreading to simulate the implementation of each subroutine running.
 
 ### TODO
-
-1. Support to Array. (For now, we just treat Array as a single Variable.)
-2. Possible Read/Write happens in the IF CONDITION / FOR CONDITION.
+- [x] Support to Array. (For now, we just treat Array as a single Variable.)
+- [] Possible Read/Write happens in the IF CONDITION / FOR CONDITION.
    ```c
    if (here) {
        x = 1;   
@@ -31,4 +28,4 @@ So we break the Loop Segment into Loop Count * (Sequential Segment).
        x = 1;
    }
    ```
-3. More Clear Output Format.
+- [x] More Clear Output Format.
