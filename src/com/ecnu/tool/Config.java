@@ -6,7 +6,7 @@ package com.ecnu.tool;
  */
 final class Config {
     static final String directoryName = "TestCase";
-    static final String fileName = "svp_simple_003_001.c";
+    static final String fileName = "svp_simple_001_001.c";
     static final int segCount = 3;
     static final String openInterruptName = "enable_isr";
     static final String closeInterruptName = "disable_isr";

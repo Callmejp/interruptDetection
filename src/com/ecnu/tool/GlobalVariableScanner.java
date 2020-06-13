@@ -23,11 +23,11 @@ public class GlobalVariableScanner extends CBaseListener {
 
 
     public void enterFunctionDeclaration(CParser.FunctionDeclarationContext ctx) {
-        System.out.print("Enter Function: ");
+        // System.out.print("Enter Function: ");
         this.inFunction = true;
         String functionName = ctx.IDENTIFIER().getText();
         AnnotatedTree.rootOfSubProgram.put(functionName, ctx);
-        System.out.println(functionName);
+        // System.out.println(functionName);
     }
 
     public void exitFunctionDeclaration(CParser.FunctionDeclarationContext ctx) {

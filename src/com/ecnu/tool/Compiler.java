@@ -31,12 +31,12 @@ class Compiler {
         ParseTreeWalker walker = new ParseTreeWalker();
 
         // pass1: 全局变量
-        System.out.println("Pass 1:");
+        // System.out.println("Pass 1:");
         GlobalVariableScanner pass1 = new GlobalVariableScanner();
         walker.walk(pass1, AnnotatedTree.ast);
 
         // pass2: 统计各程序段行数
-        System.out.println("Pass 2:");
+        // System.out.println("Pass 2:");
         LineCountScanner pass2 = new LineCountScanner();
         walker.walk(pass2, AnnotatedTree.ast);
 
@@ -48,6 +48,8 @@ class Compiler {
         ExecutorService es = new ThreadPoolExecutor(Config.segCount, Config.segCount,
                 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
 
+        // 找到的Bug数
+        int bugFoundNumber = 1;
         // 子程序2既可以抢占主程序还可以抢占子程序1，所以secondInterHappen范围更大
         int firstInterHappen = AnnotatedTree.lineOfSubProgram.get(Config.subProgramName[0]);
         int secondInterHappen = firstInterHappen + AnnotatedTree.lineOfSubProgram.get(Config.subProgramName[1]);
@@ -60,8 +62,10 @@ class Compiler {
 
                 // 初始化ConcurrentControl
                 ConcurrentControl.initConcurrentControl(inter_1, inter_2);
-                // 初始化ResultLog
-                ResultLog.initResultLog();
+                // 初始化VisitPatternLog
+                VisitPatternLog.initVisitPatternLog();
+                // 初始化RepeatLockLog
+                RepeatLockLog.initRepeatLockLog();
 
                 // 准备装载返回线程结果的Future数组
                 ArrayList<Future> rst = new ArrayList<>();
@@ -83,6 +87,32 @@ class Compiler {
                     } catch (ExecutionException | InterruptedException | CancellationException ie) {
                         ie.printStackTrace();
                     }
+                }
+
+                if (VisitPatternLog.hasFoundBug ||
+                    RepeatLockLog.lockState[1] == 3 ||
+                    RepeatLockLog.lockState[2] == 3) {
+                    System.out.println("发现第 " + bugFoundNumber + " 个Bug");
+                    System.out.println("此时中断发生情况:");
+                    System.out.println("    " + VisitPatternLog.placeOfInter_1);
+                    System.out.println("    " + VisitPatternLog.placeOfInter_2);
+
+                    if (VisitPatternLog.hasFoundBug) {
+                        System.out.println("-------------访问序模式-------------");
+                        System.out.println(VisitPatternLog.sb.toString());
+                    }
+                    if (RepeatLockLog.lockState[1] == 3 ||
+                        RepeatLockLog.lockState[2] == 3) {
+                        System.out.println("-------------重复加锁模式-------------");
+                        if (RepeatLockLog.lockState[1] == 3) {
+                            System.out.println("对于中断1发生了重复加锁");
+                        }
+                        if (RepeatLockLog.lockState[2] == 3) {
+                            System.out.println("对于中断2发生了重复加锁");
+                        }
+                    }
+                    bugFoundNumber ++;
+
                 }
 
             }

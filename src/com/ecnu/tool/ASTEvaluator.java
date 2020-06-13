@@ -25,25 +25,24 @@ public class ASTEvaluator extends CBaseVisitor<Object>{
         this.pID = pID;
     }
 
-    private void queryInterrupt() {
+    private void queryInterrupt(String nearCodeText) {
         // 抢占程序号不可能是主程序
         for (int interID = Config.segCount-1; interID >= 1; interID --) {
             // 运行到中断发生处，且此时中断没有被屏蔽
-            // System.out.println("中断比对： " + ConcurrentControl.interHappenPlace[interID] + " " + this.currentLineCount);
             if (ConcurrentControl.interHappenPlace[interID] == this.currentLineCount
              && ConcurrentControl.interControl[interID]) {
+                // 为复现Bug, 记录中断发生信息
+                VisitPatternLog.logInterHappenPlace(pID, interID, nearCodeText);
                 // 既然能运行，当前的运行pID肯定就是自己，所以先把当前运行id改为中断的pID
                 // 并在栈中记录当前线程的pID以便之后依次被唤醒，
                 // 唤醒抢占线程，最后再await自己
                 ConcurrentControl.pIDOfCurrentProgram = interID;
                 ConcurrentControl.notifyOrder.push(pID);
-                // System.out.println("唤醒: " + interID);
                 ConcurrentControl.conditions[interID].signal();
                 try {
+                    // 防止假唤醒
                     while (ConcurrentControl.pIDOfCurrentProgram != pID) {
-                        // System.out.println("线程 " + pID + " 进入等待");
                         ConcurrentControl.conditions[pID].await();
-                        // System.out.println("改了看不到？ " + ConcurrentControl.pIDOfCurrentProgram);
                     }
                 } catch (InterruptedException ie) {
                     ie.printStackTrace();
@@ -71,7 +70,7 @@ public class ASTEvaluator extends CBaseVisitor<Object>{
 
     private void findBug(CParser.ExpressionContext ctx) {
         // 如果已经找到一个Bug，就不需要再找了
-        if (ResultLog.hasFoundBug) return;
+        if (VisitPatternLog.hasFoundBug) return;
 
         // 读操作
         String rightPart = ctx.expression(1).getText();
@@ -80,52 +79,52 @@ public class ASTEvaluator extends CBaseVisitor<Object>{
         // 扫描所有的全局变量
         for (String variableName : AnnotatedTree.MainScope.keySet()) {
             // 本线程之前是否读过或者写过
-            boolean ownReadBefore = ResultLog.readRecord.get(pID).get(variableName);
-            boolean ownWriteBefore = ResultLog.writeRecord.get(pID).get(variableName);
+            boolean ownReadBefore = VisitPatternLog.readRecord.get(pID).get(variableName);
+            boolean ownWriteBefore = VisitPatternLog.writeRecord.get(pID).get(variableName);
             // 其它线程之前是否读过或者写过
             boolean otherWriteBefore = false;
             boolean otherReadBefore = false;
 
             if (rightPart.contains(variableName)) {
                 for (int i=pID+1; i<Config.segCount; i++) {
-                    otherWriteBefore = otherWriteBefore || ResultLog.writeRecord.get(i).get(variableName);
+                    otherWriteBefore = otherWriteBefore || VisitPatternLog.writeRecord.get(i).get(variableName);
                 }
                 // 满足Bug Pattern，其中本线程接下来肯定要读了
                 // R W R
                 if (ownReadBefore && otherWriteBefore) {
-                    ResultLog.logSpecificInfo(pID, variableName, 0);
+                    VisitPatternLog.logSpecificInfo(pID, variableName, 0);
                 }
                 // W W R
                 else if (ownWriteBefore && otherWriteBefore) {
-                    ResultLog.logSpecificInfo(pID, variableName, 1);
+                    VisitPatternLog.logSpecificInfo(pID, variableName, 1);
                 } else {
                     // 覆盖其它线程的操作有效性
                     for (int i=pID+1; i<Config.segCount; i++) {
-                        ResultLog.writeRecord.get(i).put(variableName, false);
+                        VisitPatternLog.writeRecord.get(i).put(variableName, false);
                     }
                 }
-                ResultLog.readRecord.get(pID).put(variableName, true);
+                VisitPatternLog.readRecord.get(pID).put(variableName, true);
 
             } else if (leftPart.contains(variableName)) {
                 for (int i=pID+1; i<Config.segCount; i++) {
-                    otherWriteBefore = otherWriteBefore || ResultLog.writeRecord.get(i).get(variableName);
-                    otherReadBefore = otherReadBefore || ResultLog.readRecord.get(i).get(variableName);
+                    otherWriteBefore = otherWriteBefore || VisitPatternLog.writeRecord.get(i).get(variableName);
+                    otherReadBefore = otherReadBefore || VisitPatternLog.readRecord.get(i).get(variableName);
                 }
                 // W R W
                 if (ownWriteBefore && otherReadBefore) {
-                    ResultLog.logSpecificInfo(pID, variableName, 2);
+                    VisitPatternLog.logSpecificInfo(pID, variableName, 2);
                 }
                 // R W W
                 else if (ownReadBefore && otherWriteBefore) {
-                    ResultLog.logSpecificInfo(pID, variableName, 3);
+                    VisitPatternLog.logSpecificInfo(pID, variableName, 3);
                 } else {
                     // 覆盖其它线程的操作有效性
                     for (int i=pID+1; i<Config.segCount; i++) {
-                        ResultLog.readRecord.get(i).put(variableName, false);
-                        ResultLog.writeRecord.get(i).put(variableName, false);
+                        VisitPatternLog.readRecord.get(i).put(variableName, false);
+                        VisitPatternLog.writeRecord.get(i).put(variableName, false);
                     }
                 }
-                ResultLog.writeRecord.get(pID).put(variableName, true);
+                VisitPatternLog.writeRecord.get(pID).put(variableName, true);
 
 
             }
@@ -187,7 +186,7 @@ public class ASTEvaluator extends CBaseVisitor<Object>{
         Object rtn = null;
         if (ctx.variableDeclarators() != null) {
             // TODO: 此处为指定的需要统计的代码行，使用TODO高亮标记
-            queryInterrupt();
+            queryInterrupt(ctx.getText());
             // this.currentLineCount += 1;
             // 调试使用
             // System.out.println("BlockStatement --- pID: " + pID + " : " + ctx.getText());
@@ -210,7 +209,7 @@ public class ASTEvaluator extends CBaseVisitor<Object>{
                     && (! statement.contains("for"))
                     && (! statement.contains("else")
                     && (! statement.contains("{")))) {
-                queryInterrupt();
+                queryInterrupt(statement);
                 // this.currentLineCount += 1;
                 // 调试使用
                 // System.out.println("Statement --- pID: " + pID + " : " + statement + "(Line: " + currentLineCount + ")");
@@ -480,10 +479,14 @@ public class ASTEvaluator extends CBaseVisitor<Object>{
             Objects.requireNonNull(param);
             // System.out.println(param);
             ConcurrentControl.interControl[param] = false;
+            // 加锁
+            RepeatLockLog.updateState(param, 1);
         } else if (functionName.contains(Config.openInterruptName)) {
             Objects.requireNonNull(param);
             // System.out.println(param);
             ConcurrentControl.interControl[param] = true;
+            // 去锁
+            RepeatLockLog.updateState(param, 0);
         } else {
             // System.out.println("trivial function name: " + functionName);
         }
